@@ -124,6 +124,7 @@ setup_services() {
 
 setup_ytdf() {
     echo "Setting up ytdf utility..."
+    mkdir -p "$automation_dir"
     wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || echo "Failed to download ytdf.py"
     chmod +x "$automation_dir/ytdf.py" || echo "Failed to set executable permissions on ytdf.py"
     echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || echo "Failed to set up ytdf alias"
@@ -184,20 +185,7 @@ echo "set -g mouse on" >> ~/.tmux.conf || echo "Failed to configure Tmux"
 
 setup_services
 
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm -rf ~/miniconda3/miniconda.sh
-~/miniconda3/bin/conda init bash
-conda create -n myenv
-conda activate myenv
-conda install pytorch torchvision torchaudio cpuonly -c pytorch
-conda install -c fastai fastai
-conda install numpy pandas scikit-learn matplotlib seaborn scipy statsmodels
-conda install -c conda-forge xgboost tensorflow pytorch
-conda deactivate
-
 cleanup
 
-echo "Script completed. Welcome to  your customized Arch Linux setup!"
+echo "Script completed. Welcome to your customized Arch Linux setup!"
 neofetch
