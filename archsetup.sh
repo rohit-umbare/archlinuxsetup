@@ -2,6 +2,30 @@
 
 set -e  # Exit on any error
 
+# Function to check if running as root in a chroot environment
+check_chroot_user() {
+    if [ "$(id -u)" -eq 0 ]; then
+        read -p "Running as root. Please provide a non-root user to proceed: " user
+        if id "$user" &>/dev/null; then
+            echo "Proceeding with user $user."
+            export USER="$user"
+        else
+            echo "User $user does not exist. Exiting."
+            exit 1
+        fi
+    else
+        echo "Running as non-root user. Proceeding."
+    fi
+}
+
+# Function to check for internet connection
+check_internet() {
+    if ! ping -c 1 8.8.8.8 &>/dev/null; then
+        echo "No internet connection. Exiting."
+        exit 1
+    fi
+}
+
 # Directories
 aur_dir="$HOME/aur_packages"
 automation_dir="$HOME/automation"
@@ -39,7 +63,7 @@ official_packages=(
     "libreoffice-fresh"
     "yt-dlp"
     "git-lfs"
-    "python-poetry"
+    "python"
     "glances"
     "ncdu"
     "fail2ban"
@@ -149,18 +173,21 @@ cleanup() {
 }
 
 # Main script
+check_chroot_user
+check_internet
+
 echo "Creating necessary directories..."
 mkdir -p "$aur_dir" "$automation_dir" || echo "Failed to create directories"
 cd "$aur_dir" || echo "Failed to change to AUR directory"
+
+modify_makepkg_conf
+modify_pacman_conf
 
 update_mirrors
 install_official_packages
 
 echo "Setting Chromium as the default browser..."
 xdg-settings set default-web-browser chromium.desktop || echo "Failed to set Chromium as default browser"
-
-modify_makepkg_conf
-modify_pacman_conf
 
 setup_services
 
