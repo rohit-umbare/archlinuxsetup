@@ -184,7 +184,7 @@ chmod +x "$automation_dir/ytdf.py" || echo "Failed to set executable permissions
 echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || echo "Failed to set up ytdf alias"
 source ~/.bashrc || echo "Failed to reload .bashrc"
 
-install_conda       
+install_conda
 install_conda_packages
 
 echo "Configuring Tmux..."
@@ -192,4 +192,5 @@ echo "set -g mouse on" >> ~/.tmux.conf || echo "Failed to configure Tmux"
 
 cleanup
 
-echo "Script completed with some errors. Check the output for details."
+echo "Script completed. Welcome to your customized Arch Linux setup!"
+neofetch
