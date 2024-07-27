@@ -29,7 +29,6 @@ check_internet() {
 # Directories
 aur_dir="$HOME/aur_packages"
 automation_dir="$HOME/automation"
-conda_dir="$HOME/miniconda3"
 
 # AUR repositories
 aur_repos=(
@@ -68,13 +67,6 @@ official_packages=(
     "ncdu"
     "fail2ban"
     "rkhunter"
-)
-
-# Conda packages
-conda_packages=(
-    "pytorch torchvision torchaudio cpuonly"
-    "fastai fastbook"
-    "pandas csv matplotlib"
 )
 
 # Functions
@@ -130,27 +122,12 @@ setup_services() {
     sudo systemctl start bluetooth || echo "Failed to start Bluetooth"
 }
 
-install_conda() {
-    echo "Installing Miniconda..."
-    if [ ! -d "$conda_dir" ]; then
-        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh || echo "Failed to download Miniconda"
-        bash ~/miniconda.sh -b -p "$conda_dir" || echo "Failed to install Miniconda"
-        rm ~/miniconda.sh || echo "Failed to remove Miniconda installer"
-        eval "$($conda_dir/bin/conda shell.bash hook)" || echo "Failed to initialize Conda"
-    else
-        echo "Miniconda is already installed."
-        eval "$($conda_dir/bin/conda shell.bash hook)" || echo "Failed to initialize Conda"
-    fi
-}
-
-install_conda_packages() {
-    echo "Creating Conda environment 'myenv' and installing packages..."
-    conda create -y -n myenv python || echo "Failed to create Conda environment"
-    conda activate myenv || echo "Failed to activate Conda environment"
-    conda install -y -c pytorch "${conda_packages[0]}" || echo "Failed to install PyTorch packages"
-    conda install -y -c fastai "${conda_packages[1]}" || echo "Failed to install Fastai packages"
-    conda install -y "${conda_packages[2]}" || echo "Failed to install additional Conda packages"
-    conda deactivate || echo "Failed to deactivate Conda environment"
+setup_ytdf() {
+    echo "Setting up ytdf utility..."
+    wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || echo "Failed to download ytdf.py"
+    chmod +x "$automation_dir/ytdf.py" || echo "Failed to set executable permissions on ytdf.py"
+    echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || echo "Failed to set up ytdf alias"
+    source ~/.bashrc || echo "Failed to reload .bashrc"
 }
 
 cleanup() {
@@ -167,9 +144,6 @@ cleanup() {
             )
         fi
     done
-
-    echo "Clearing Miniconda package cache..."
-    conda clean -a -y || echo "Failed to clear Miniconda package cache"
 }
 
 # Main script
@@ -203,21 +177,27 @@ for repo in "${aur_repos[@]}"; do
     )
 done
 
-echo "Setting up ytdf utility..."
-wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || echo "Failed to download ytdf.py"
-chmod +x "$automation_dir/ytdf.py" || echo "Failed to set executable permissions on ytdf.py"
-echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || echo "Failed to set up ytdf alias"
-source ~/.bashrc || echo "Failed to reload .bashrc"
-
-install_conda
-install_conda_packages
+setup_ytdf
 
 echo "Configuring Tmux..."
 echo "set -g mouse on" >> ~/.tmux.conf || echo "Failed to configure Tmux"
 
 setup_services
 
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm -rf ~/miniconda3/miniconda.sh
+~/miniconda3/bin/conda init bash
+conda create -n myenv
+conda activate myenv
+conda install pytorch torchvision torchaudio cpuonly -c pytorch
+conda install -c fastai fastai
+conda install numpy pandas scikit-learn matplotlib seaborn scipy statsmodels
+conda install -c conda-forge xgboost tensorflow pytorch
+conda deactivate
+
 cleanup
 
-echo "Script completed. Welcome to your customized Arch Linux setup!"
+echo "Script completed. Welcome to  your customized Arch Linux setup!"
 neofetch
