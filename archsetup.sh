@@ -189,8 +189,6 @@ install_official_packages
 echo "Setting Chromium as the default browser..."
 xdg-settings set default-web-browser chromium.desktop || echo "Failed to set Chromium as default browser"
 
-setup_services
-
 echo "Cloning and installing AUR packages..."
 for repo in "${aur_repos[@]}"; do
     repo_name=$(basename "$repo" .git)
@@ -216,6 +214,8 @@ install_conda_packages
 
 echo "Configuring Tmux..."
 echo "set -g mouse on" >> ~/.tmux.conf || echo "Failed to configure Tmux"
+
+setup_services
 
 cleanup
 
