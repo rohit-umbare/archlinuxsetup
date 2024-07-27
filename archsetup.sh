@@ -48,14 +48,12 @@ official_packages=(
     "base-devel"
     "htop"
     "neofetch"
-    "vim"
     "tmux"
     "ripgrep"
     "fd"
     "exa"
     "bat"
     "flameshot"
-    "gnome-tweaks"
     "nodejs"
     "npm"
     "ufw"
@@ -130,6 +128,31 @@ setup_ytdf() {
     source ~/.bashrc || { echo "Failed to reload .bashrc"; exit 1; }
 }
 
+setup_fail2ban() {
+    echo "Configuring Fail2ban..."
+    sudo systemctl enable fail2ban || { echo "Failed to enable Fail2ban"; exit 1; }
+    sudo systemctl start fail2ban || { echo "Failed to start Fail2ban"; exit 1; }
+    # Example configuration, customize as needed
+    sudo tee /etc/fail2ban/jail.local <<EOF
+[sshd]
+enabled = true
+port = ssh
+logpath = %(sshd_log)s
+maxretry = 5
+bantime = 10m
+EOF
+    sudo systemctl restart fail2ban || { echo "Failed to restart Fail2ban"; exit 1; }
+}
+
+setup_rkhunter() {
+    echo "Configuring Rkhunter..."
+    sudo systemctl enable rkhunter || { echo "Failed to enable Rkhunter"; exit 1; }
+    sudo systemctl start rkhunter || { echo "Failed to start Rkhunter"; exit 1; }
+    # Example configuration, customize as needed
+    sudo rkhunter --update || { echo "Failed to update Rkhunter"; exit 1; }
+    sudo rkhunter --check || { echo "Failed to run Rkhunter check"; exit 1; }
+}
+
 cleanup() {
     echo "Cleaning package cache..."
     sudo pacman -Scc --noconfirm || { echo "Failed to clean package cache"; exit 1; }
@@ -183,6 +206,8 @@ echo "Configuring Tmux..."
 echo "set -g mouse on" >> ~/.tmux.conf || { echo "Failed to configure Tmux"; exit 1; }
 
 setup_services
+setup_fail2ban
+setup_rkhunter
 
 cleanup
 
