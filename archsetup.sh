@@ -1,5 +1,5 @@
 #!/bin/bash
-#by umbarers52@gmail.com
+#contact umbarers52@gmail.com 
 set -e  # Exit on any error
 
 # Function to check if running as root in a chroot environment
@@ -43,6 +43,7 @@ aur_repos=(
 # Official packages
 official_packages=(
     "firefox"
+    "telegram-desktop"
     "chromium"
     "git"
     "base-devel"
@@ -51,8 +52,6 @@ official_packages=(
     "tmux"
     "ripgrep"
     "fd"
-    "exa"
-    "bat"
     "flameshot"
     "nodejs"
     "npm"
