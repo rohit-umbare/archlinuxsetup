@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#by umbarers52@gmail.com
 set -e  # Exit on any error
 
 # Function to check if running as root in a chroot environment
