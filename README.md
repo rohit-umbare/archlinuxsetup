@@ -8,9 +8,9 @@ This repository contains a script to automate the setup and configuration of an 
 
 ## Usage
 ```sh
-wget bit.ly/umbare
-chmod +x umbare
-./umbare
+wget bit.ly/rohit-archsetup
+chmod +x rohit-archetup
+./rohit-archsetip
 ```
 
 ## Script Details
