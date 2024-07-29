@@ -26,15 +26,6 @@ check_internet() {
     fi
 }
 
-# Function to setup sudo askpass
-setup_sudo_askpass() {
-    echo "Setting up sudo askpass..."
-    if ! command -v ssh-askpass &>/dev/null; then
-        sudo pacman -S --noconfirm ssh-askpass || { echo "Failed to install ssh-askpass"; errors+="\nFailed to install ssh-askpass"; }
-    fi
-    export SUDO_ASKPASS=/usr/bin/ssh-askpass
-}
-
 # Directories
 aur_dir="$HOME/aur_packages"
 automation_dir="$HOME/automation"
@@ -158,7 +149,6 @@ cleanup() {
 # Main script
 check_chroot_user
 check_internet
-setup_sudo_askpass
 
 echo "Creating necessary directories..."
 mkdir -p "$aur_dir" "$automation_dir" || { echo "Failed to create directories"; errors+="\nFailed to create directories"; }
@@ -183,24 +173,18 @@ for repo in "${aur_repos[@]}"; do
     (
         cd "$repo_name" || exit
         echo "Building and installing $repo_name..."
-        sudo -A makepkg -si --noconfirm || { echo "Failed to build and install $repo_name"; errors+="\nFailed to build and install $repo_name"; }
+        makepkg -si --noconfirm || { echo "Failed to build and install $repo_name"; errors+="\nFailed to build and install $repo_name"; }
     )
 done
 
-setup_ytdf
-
-echo "Configuring Tmux..."
-echo "set -g mouse on" >> ~/.tmux.conf || { echo "Failed to configure Tmux"; errors+="\nFailed to configure Tmux"; }
-
 setup_services
-
+setup_ytdf
 cleanup
 
-echo "Script completed."
+# Final message
 if [ -n "$errors" ]; then
-    echo -e "Some tasks failed during the setup:${errors}"
+    echo -e "Some tasks encountered errors and were not completed successfully: $errors"
+    echo "Please review the errors and address them manually if necessary."
 else
-    echo "All tasks completed successfully!"
+    echo "Script completed successfully."
 fi
-
-neofetch
