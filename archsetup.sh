@@ -1,5 +1,5 @@
 #!/bin/bash
-#contact umbarers52@gmail.com 
+#contact umbarers52@gmail.com
 set -e  # Exit on any error
 
 # Function to check if running as root in a chroot environment
@@ -24,6 +24,15 @@ check_internet() {
         echo "No internet connection. Exiting."
         exit 1
     fi
+}
+
+# Function to setup sudo askpass
+setup_sudo_askpass() {
+    echo "Setting up sudo askpass..."
+    if ! command -v ssh-askpass &>/dev/null; then
+        sudo pacman -S --noconfirm ssh-askpass || { echo "Failed to install ssh-askpass"; errors+="\nFailed to install ssh-askpass"; }
+    fi
+    export SUDO_ASKPASS=/usr/bin/ssh-askpass
 }
 
 # Directories
@@ -62,99 +71,77 @@ official_packages=(
     "python"
     "glances"
     "ncdu"
-    "fail2ban"
-    "rkhunter"
+    "zip"
+    "unzip"
 )
+
+# Variables to track errors
+errors=""
 
 # Functions
 modify_pacman_conf() {
     echo "Modifying /etc/pacman.conf..."
-    sudo sed -i 's/^#ParallelDownloads = 5/ParallelDownloads = 5/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; exit 1; }
-    sudo sed -i 's/^#VerbosePkgLists/VerbosePkgLists/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; exit 1; }
-    sudo sed -i 's/^#Color/Color/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; exit 1; }
+    sudo sed -i 's/^#ParallelDownloads = 5/ParallelDownloads = 5/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; errors+="\nFailed to modify /etc/pacman.conf"; }
+    sudo sed -i 's/^#VerbosePkgLists/VerbosePkgLists/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; errors+="\nFailed to modify /etc/pacman.conf"; }
+    sudo sed -i 's/^#Color/Color/' /etc/pacman.conf || { echo "Failed to modify /etc/pacman.conf"; errors+="\nFailed to modify /etc/pacman.conf"; }
 }
 
 modify_makepkg_conf() {
     echo "Modifying /etc/makepkg.conf..."
-    sudo sed -i 's/^#MAKEFLAGS="-j2"/MAKEFLAGS="-j$(nproc)"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; exit 1; }
-    sudo sed -i 's/^#CCACHE_SIZE="2G"/CCACHE_SIZE="10G"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; exit 1; }
-    sudo sed -i 's/^#USECCACHE="yes"/USECCACHE="yes"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; exit 1; }
+    sudo sed -i 's/^#MAKEFLAGS="-j2"/MAKEFLAGS="-j$(nproc)"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; errors+="\nFailed to modify /etc/makepkg.conf"; }
+    sudo sed -i 's/^#CCACHE_SIZE="2G"/CCACHE_SIZE="10G"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; errors+="\nFailed to modify /etc/makepkg.conf"; }
+    sudo sed -i 's/^#USECCACHE="yes"/USECCACHE="yes"/' /etc/makepkg.conf || { echo "Failed to modify /etc/makepkg.conf"; errors+="\nFailed to modify /etc/makepkg.conf"; }
 }
 
 update_mirrors() {
     echo "Generating a new mirror list..."
-    sudo pacman -S --noconfirm reflector || { echo "Failed to install reflector"; exit 1; }
-    sudo reflector --country 'India' --latest 10 --sort rate --save /etc/pacman.d/mirrorlist || { echo "Failed to generate mirror list"; exit 1; }
+    sudo pacman -S --noconfirm reflector || { echo "Failed to install reflector"; errors+="\nFailed to install reflector"; }
+    sudo reflector --country 'India' --sort rate --save /etc/pacman.d/mirrorlist || { echo "Failed to generate mirror list"; errors+="\nFailed to generate mirror list"; }
     echo "Updating system with new mirrors..."
-    sudo pacman -Syu --noconfirm || { echo "Failed to update system"; exit 1; }
+    sudo pacman -Syu --noconfirm || { echo "Failed to update system"; errors+="\nFailed to update system"; }
 }
 
 install_official_packages() {
     echo "Installing official packages..."
-    sudo pacman -S --noconfirm "${official_packages[@]}" || { echo "Failed to install some official packages"; exit 1; }
+    sudo pacman -S --noconfirm "${official_packages[@]}" || { echo "Failed to install some official packages"; errors+="\nFailed to install some official packages"; }
 }
 
 setup_services() {
     echo "Configuring UFW..."
-    sudo ufw default deny incoming || { echo "Failed to set UFW default deny"; exit 1; }
-    sudo ufw default allow outgoing || { echo "Failed to set UFW default allow"; exit 1; }
-    sudo ufw allow ssh || { echo "Failed to allow SSH in UFW"; exit 1; }
-    sudo ufw allow 1714:1764/udp || { echo "Failed to allow UDP range in UFW"; exit 1; }
-    sudo ufw allow 1714:1764/tcp || { echo "Failed to allow TCP range in UFW"; exit 1; }
-    sudo ufw enable || { echo "Failed to enable UFW"; exit 1; }
-    sudo systemctl enable ufw || { echo "Failed to enable UFW service"; exit 1; }
-    sudo systemctl start ufw || { echo "Failed to start UFW service"; exit 1; }
+    sudo ufw default deny incoming || { echo "Failed to set UFW default deny"; errors+="\nFailed to set UFW default deny"; }
+    sudo ufw default allow outgoing || { echo "Failed to set UFW default allow"; errors+="\nFailed to set UFW default allow"; }
+    sudo ufw allow ssh || { echo "Failed to allow SSH in UFW"; errors+="\nFailed to allow SSH in UFW"; }
+    sudo ufw allow 1714:1764/udp || { echo "Failed to allow UDP range in UFW"; errors+="\nFailed to allow UDP range in UFW"; }
+    sudo ufw allow 1714:1764/tcp || { echo "Failed to allow TCP range in UFW"; errors+="\nFailed to allow TCP range in UFW"; }
+    sudo ufw enable || { echo "Failed to enable UFW"; errors+="\nFailed to enable UFW"; }
+    sudo systemctl enable ufw || { echo "Failed to enable UFW service"; errors+="\nFailed to enable UFW service"; }
+    sudo systemctl start ufw || { echo "Failed to start UFW service"; errors+="\nFailed to start UFW service"; }
 
     echo "Configuring Preload..."
-    sudo systemctl enable preload || { echo "Failed to enable Preload"; exit 1; }
-    sudo systemctl start preload || { echo "Failed to start Preload"; exit 1; }
+    sudo systemctl enable preload || { echo "Failed to enable Preload"; errors+="\nFailed to enable Preload"; }
+    sudo systemctl start preload || { echo "Failed to start Preload"; errors+="\nFailed to start Preload"; }
 
     echo "Configuring auto-cpufreq..."
-    sudo systemctl enable auto-cpufreq || { echo "Failed to enable auto-cpufreq"; exit 1; }
-    sudo systemctl start auto-cpufreq || { echo "Failed to start auto-cpufreq"; exit 1; }
+    sudo systemctl enable auto-cpufreq || { echo "Failed to enable auto-cpufreq"; errors+="\nFailed to enable auto-cpufreq"; }
+    sudo systemctl start auto-cpufreq || { echo "Failed to start auto-cpufreq"; errors+="\nFailed to start auto-cpufreq"; }
 
     echo "Setting up Bluetooth..."
-    sudo systemctl enable bluetooth || { echo "Failed to enable Bluetooth"; exit 1; }
-    sudo systemctl start bluetooth || { echo "Failed to start Bluetooth"; exit 1; }
+    sudo systemctl enable bluetooth || { echo "Failed to enable Bluetooth"; errors+="\nFailed to enable Bluetooth"; }
+    sudo systemctl start bluetooth || { echo "Failed to start Bluetooth"; errors+="\nFailed to start Bluetooth"; }
 }
 
 setup_ytdf() {
     echo "Setting up ytdf utility..."
     mkdir -p "$automation_dir"
-    wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || { echo "Failed to download ytdf.py"; exit 1; }
-    chmod +x "$automation_dir/ytdf.py" || { echo "Failed to set executable permissions on ytdf.py"; exit 1; }
-    echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || { echo "Failed to set up ytdf alias"; exit 1; }
-    source ~/.bashrc || { echo "Failed to reload .bashrc"; exit 1; }
-}
-
-setup_fail2ban() {
-    echo "Configuring Fail2ban..."
-    sudo systemctl enable fail2ban || { echo "Failed to enable Fail2ban"; exit 1; }
-    sudo systemctl start fail2ban || { echo "Failed to start Fail2ban"; exit 1; }
-    # Example configuration, customize as needed
-    sudo tee /etc/fail2ban/jail.local <<EOF
-[sshd]
-enabled = true
-port = ssh
-logpath = %(sshd_log)s
-maxretry = 5
-bantime = 10m
-EOF
-    sudo systemctl restart fail2ban || { echo "Failed to restart Fail2ban"; exit 1; }
-}
-
-setup_rkhunter() {
-    echo "Configuring Rkhunter..."
-    sudo systemctl enable rkhunter || { echo "Failed to enable Rkhunter"; exit 1; }
-    sudo systemctl start rkhunter || { echo "Failed to start Rkhunter"; exit 1; }
-    # Example configuration, customize as needed
-    sudo rkhunter --update || { echo "Failed to update Rkhunter"; exit 1; }
-    sudo rkhunter --check || { echo "Failed to run Rkhunter check"; exit 1; }
+    wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || { echo "Failed to download ytdf.py"; errors+="\nFailed to download ytdf.py"; }
+    chmod +x "$automation_dir/ytdf.py" || { echo "Failed to set executable permissions on ytdf.py"; errors+="\nFailed to set executable permissions on ytdf.py"; }
+    echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || { echo "Failed to set up ytdf alias"; errors+="\nFailed to set up ytdf alias"; }
+    source ~/.bashrc || { echo "Failed to reload .bashrc"; errors+="\nFailed to reload .bashrc"; }
 }
 
 cleanup() {
     echo "Cleaning package cache..."
-    sudo pacman -Scc --noconfirm || { echo "Failed to clean package cache"; exit 1; }
+    sudo pacman -Scc --noconfirm || { echo "Failed to clean package cache"; errors+="\nFailed to clean package cache"; }
 
     echo "Removing AUR build directories..."
     for repo in "${aur_repos[@]}"; do
@@ -162,7 +149,7 @@ cleanup() {
         if [ -d "$repo_name" ]; then
             (
                 cd "$repo_name" || exit
-                rm -rf src pkg || { echo "Failed to remove build directories in $repo_name"; exit 1; }
+                rm -rf src pkg || { echo "Failed to remove build directories in $repo_name"; errors+="\nFailed to remove build directories in $repo_name"; }
             )
         fi
     done
@@ -171,10 +158,11 @@ cleanup() {
 # Main script
 check_chroot_user
 check_internet
+setup_sudo_askpass
 
 echo "Creating necessary directories..."
-mkdir -p "$aur_dir" "$automation_dir" || { echo "Failed to create directories"; exit 1; }
-cd "$aur_dir" || { echo "Failed to change to AUR directory"; exit 1; }
+mkdir -p "$aur_dir" "$automation_dir" || { echo "Failed to create directories"; errors+="\nFailed to create directories"; }
+cd "$aur_dir" || { echo "Failed to change to AUR directory"; errors+="\nFailed to change to AUR directory"; }
 
 modify_pacman_conf
 modify_makepkg_conf
@@ -183,32 +171,36 @@ update_mirrors
 install_official_packages
 
 echo "Setting Chromium as the default browser..."
-xdg-settings set default-web-browser chromium.desktop || { echo "Failed to set Chromium as default browser"; exit 1; }
+xdg-settings set default-web-browser chromium.desktop || { echo "Failed to set Chromium as default browser"; errors+="\nFailed to set Chromium as default browser"; }
 
 echo "Cloning and installing AUR packages..."
 for repo in "${aur_repos[@]}"; do
     repo_name=$(basename "$repo" .git)
     if [ ! -d "$repo_name" ]; then
         echo "Cloning $repo..."
-        git clone "$repo" || { echo "Failed to clone $repo"; exit 1; }
+        git clone "$repo" || { echo "Failed to clone $repo"; errors+="\nFailed to clone $repo"; }
     fi
     (
         cd "$repo_name" || exit
         echo "Building and installing $repo_name..."
-        makepkg -si --noconfirm || { echo "Failed to build and install $repo_name"; exit 1; }
+        sudo -A makepkg -si --noconfirm || { echo "Failed to build and install $repo_name"; errors+="\nFailed to build and install $repo_name"; }
     )
 done
 
 setup_ytdf
 
 echo "Configuring Tmux..."
-echo "set -g mouse on" >> ~/.tmux.conf || { echo "Failed to configure Tmux"; exit 1; }
+echo "set -g mouse on" >> ~/.tmux.conf || { echo "Failed to configure Tmux"; errors+="\nFailed to configure Tmux"; }
 
 setup_services
-setup_fail2ban
-setup_rkhunter
 
 cleanup
 
-echo "Script completed. Welcome to your customized Arch Linux setup!"
+echo "Script completed."
+if [ -n "$errors" ]; then
+    echo -e "Some tasks failed during the setup:${errors}"
+else
+    echo "All tasks completed successfully!"
+fi
+
 neofetch
