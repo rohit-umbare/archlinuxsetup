@@ -124,10 +124,21 @@ setup_services() {
 setup_ytdf() {
     echo "Setting up ytdf utility..."
     mkdir -p "$automation_dir"
-    wget https://raw.githubusercontent.com/rohit-umbare/ytdf/main/ytdf.py -O "$automation_dir/ytdf.py" || { echo "Failed to download ytdf.py"; errors+="\nFailed to download ytdf.py"; }
-    chmod +x "$automation_dir/ytdf.py" || { echo "Failed to set executable permissions on ytdf.py"; errors+="\nFailed to set executable permissions on ytdf.py"; }
-    echo "alias ytdf='python3 $automation_dir/ytdf.py'" >> ~/.bashrc || { echo "Failed to set up ytdf alias"; errors+="\nFailed to set up ytdf alias"; }
-    source ~/.bashrc || { echo "Failed to reload .bashrc"; errors+="\nFailed to reload .bashrc"; }
+    if [ ! -d "$automation_dir/ytdf" ]; then
+        git clone https://github.com/rohit-umbare/ytdf.git "$automation_dir/ytdf" || { echo "Failed to clone ytdf repository"; errors+="\nFailed to clone ytdf repository"; }
+    else
+        echo "ytdf repository already exists in $automation_dir"
+    fi
+
+    chmod +x "$automation_dir/ytdf/ytdf.py" || { echo "Failed to set executable permissions on ytdf.py"; errors+="\nFailed to set executable permissions on ytdf.py"; }
+
+    # Check if the alias already exists
+    if ! grep -q "alias ytdf='python3 $automation_dir/ytdf/ytdf.py'" ~/.bashrc; then
+        echo "alias ytdf='python3 $automation_dir/ytdf/ytdf.py'" >> ~/.bashrc || { echo "Failed to set up ytdf alias"; errors+="\nFailed to set up ytdf alias"; }
+        source ~/.bashrc || { echo "Failed to reload .bashrc"; errors+="\nFailed to reload .bashrc"; }
+    else
+        echo "ytdf alias already exists in .bashrc"
+    fi
 }
 
 cleanup() {
