@@ -47,4 +47,4 @@ The `archsetup.sh` script performs the following tasks:
    - Clones and installs AUR packages including `google-chrome`, `visual-studio-code-bin`, `preload`, `auto-cpufreq`, `microsoft-edge-stable-bin`, and `mirage`.
 
 9. **Cleans Up**:
-   - Cleans package cache and removes build directories.
+   - Cleans package cache and removes build directories to save space.
